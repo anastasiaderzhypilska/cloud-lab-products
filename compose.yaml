@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:16.8
+    environment:
+      POSTGRES_DB: products
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d products"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://app:${DB_PASSWORD:?Set DB_PASSWORD}@db:5432/products
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
