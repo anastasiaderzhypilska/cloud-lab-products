@@ -64,3 +64,37 @@ Workflow: .github/workflows/deploy.yml
 - Secrets Manager передає DATABASE_URL в ECS.
 - GitHub Actions використовує OIDC без постійних AWS-ключів.
 - Контейнер працює без root.
+
+## Перше розгортання з нуля
+
+Потрібні Docker, Terraform, AWS CLI та налаштовані AWS credentials.
+Перед запуском налаштувати MFA, AWS Budget і пароль БД у
+terraform/database.auto.tfvars (цей файл не додавати в Git).
+
+1. Створити ECR:
+
+    cd terraform
+    terraform init
+    terraform apply -target=aws_ecr_repository.api
+
+2. Повернутися в корінь проєкту й завантажити образ:
+
+    cd ..
+    export AWS_PROFILE=cloud-lab-admin
+    export AWS_REGION=eu-north-1
+    export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    export ECR="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cloud-lab-products"
+
+    aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+    docker build -t "$ECR:v1" .
+    docker push "$ECR:v1"
+
+3. Завершити створення інфраструктури:
+
+    cd terraform
+    terraform apply
+
+Після першого розгортання GitHub Actions автоматично оновлює ECS
+при кожному push у main.
+
+Видалення після захисту: terraform destroy.
