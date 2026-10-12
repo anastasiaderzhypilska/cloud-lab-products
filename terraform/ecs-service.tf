@@ -24,10 +24,10 @@ resource "aws_ecs_task_definition" "api" {
         }
       ]
 
-      environment = [
+      secrets = [
         {
-          name  = "DATABASE_URL"
-          value = local.database_url
+          name      = "DATABASE_URL"
+          valueFrom = "arn:aws:secretsmanager:eu-north-1:099957718585:secret:cloud-lab/database-url-0PhZxw"
         }
       ]
 
