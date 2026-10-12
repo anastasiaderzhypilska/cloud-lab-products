@@ -19,3 +19,17 @@ resource "aws_secretsmanager_secret_version" "database_url" {
     ignore_changes = [secret_string]
   }
 }
+
+resource "aws_secretsmanager_secret" "jwt" {
+  name        = "cloud-lab/jwt-secret"
+  description = "JWT signing key for ECS API"
+}
+
+resource "aws_secretsmanager_secret_version" "jwt" {
+  secret_id     = aws_secretsmanager_secret.jwt.id
+  secret_string = file("${path.module}/../.jwt_secret")
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}

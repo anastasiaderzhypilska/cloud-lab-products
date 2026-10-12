@@ -1,9 +1,35 @@
 import os
+
+import jwt
+from jwt import InvalidTokenError
 from contextlib import asynccontextmanager
 
 import psycopg
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+
+
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def require_auth(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+):
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Missing token")
+
+    secret = os.environ["JWT_SECRET"]
+
+    try:
+        return jwt.decode(
+            credentials.credentials,
+            secret,
+            algorithms=["HS256"],
+            options={"require": ["exp", "sub"]},
+        )
+    except InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 def connect():
@@ -38,7 +64,7 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/products")
+@app.get("/products", dependencies=[Depends(require_auth)])
 def get_products():
     with connect() as conn:
         return [
@@ -49,7 +75,7 @@ def get_products():
         ]
 
 
-@app.post("/products", status_code=201)
+@app.post("/products", status_code=201, dependencies=[Depends(require_auth)])
 def add_product(product: Product):
     with connect() as conn:
         row = conn.execute(
@@ -59,7 +85,7 @@ def add_product(product: Product):
         return {"id": row[0], **product.model_dump()}
 
 
-@app.put("/products/{product_id}")
+@app.put("/products/{product_id}", dependencies=[Depends(require_auth)])
 def update_product(product_id: int, product: Product):
     with connect() as conn:
         row = conn.execute(
@@ -71,7 +97,7 @@ def update_product(product_id: int, product: Product):
         return {"id": row[0], **product.model_dump()}
 
 
-@app.delete("/products/{product_id}")
+@app.delete("/products/{product_id}", dependencies=[Depends(require_auth)])
 def delete_product(product_id: int):
     with connect() as conn:
         row = conn.execute(
