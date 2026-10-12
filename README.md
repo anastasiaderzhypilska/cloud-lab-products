@@ -98,3 +98,35 @@ terraform/database.auto.tfvars (цей файл не додавати в Git).
 при кожному push у main.
 
 Видалення після захисту: terraform destroy.
+
+## Структура проєкту
+
+- `app/` — вихідний код FastAPI.
+- `Dockerfile` — збірка Docker-образу API.
+- `compose.yaml` — локальний запуск API та PostgreSQL.
+- `requirements.txt` — залежності Python.
+- `terraform/` — інфраструктура AWS як код.
+- `.github/workflows/deploy.yml` — автоматичний CI/CD.
+
+## Налаштування локального середовища
+
+У корені проєкту створити файл `.env`:
+
+    DB_PASSWORD=local_password_123
+
+Це приклад пароля лише для локальної розробки. Не використовувати
+його як пароль AWS RDS.
+
+Запуск:
+
+    docker compose up -d --build
+
+Перевірка:
+
+    curl http://localhost:8000/health
+
+Зупинка зі збереженням даних PostgreSQL:
+
+    docker compose down
+
+Дані залишаються у Docker volume `pgdata`.
