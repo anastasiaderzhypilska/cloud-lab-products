@@ -27,7 +27,7 @@ resource "aws_ecs_task_definition" "api" {
       secrets = [
         {
           name      = "DATABASE_URL"
-          valueFrom = "arn:aws:secretsmanager:eu-north-1:099957718585:secret:cloud-lab/database-url-0PhZxw"
+          valueFrom = aws_secretsmanager_secret.database_url.arn
         }
       ]
 
@@ -64,7 +64,9 @@ resource "aws_ecs_service" "api" {
 
   depends_on = [
     aws_lb_listener.http,
-    aws_iam_role_policy_attachment.ecs_execution
+    aws_iam_role_policy_attachment.ecs_execution,
+    aws_iam_role_policy.ecs_secrets,
+    aws_secretsmanager_secret_version.database_url
   ]
 
   lifecycle {
