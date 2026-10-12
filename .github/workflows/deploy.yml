@@ -1,0 +1,101 @@
+name: Deploy API to AWS ECS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::099957718585:role/cloud-lab-github-actions
+          aws-region: eu-north-1
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t "$REGISTRY/cloud-lab-products:$IMAGE_TAG" .
+          docker push "$REGISTRY/cloud-lab-products:$IMAGE_TAG"
+
+      - name: Deploy new ECS task definition
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          def aws(*args):
+              return json.loads(subprocess.check_output(
+                  ["aws", *args, "--region", "eu-north-1"],
+                  text=True
+              ))
+
+          service = aws(
+              "ecs", "describe-services",
+              "--cluster", "cloud-lab-cluster",
+              "--services", "cloud-lab-api"
+          )["services"][0]
+
+          current = aws(
+              "ecs", "describe-task-definition",
+              "--task-definition", service["taskDefinition"]
+          )["taskDefinition"]
+
+          allowed = [
+              "family", "taskRoleArn", "executionRoleArn",
+              "networkMode", "containerDefinitions",
+              "volumes", "placementConstraints",
+              "requiresCompatibilities", "cpu", "memory",
+              "runtimePlatform", "ephemeralStorage"
+          ]
+
+          definition = {k: current[k] for k in allowed if k in current}
+
+          for container in definition["containerDefinitions"]:
+              if container["name"] == "api":
+                  container["image"] = (
+                      "099957718585.dkr.ecr.eu-north-1.amazonaws.com/"
+                      "cloud-lab-products:" + os.environ["IMAGE_TAG"]
+                  )
+
+          with open("/tmp/task-definition.json", "w") as f:
+              json.dump(definition, f)
+          PY
+
+          TASK_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file:///tmp/task-definition.json \
+            --region eu-north-1 \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          aws ecs update-service \
+            --cluster cloud-lab-cluster \
+            --service cloud-lab-api \
+            --task-definition "$TASK_ARN" \
+            --region eu-north-1
+
+          aws ecs wait services-stable \
+            --cluster cloud-lab-cluster \
+            --services cloud-lab-api \
+            --region eu-north-1
+
+          echo "Deployment completed: $IMAGE_TAG"
