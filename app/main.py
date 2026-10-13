@@ -107,3 +107,8 @@ def delete_product(product_id: int):
         if row is None:
             raise HTTPException(status_code=404, detail="Not found")
         return {"deleted": True}
+
+
+@app.get("/version")
+def version():
+    return {"version": "1.1", "deployment": "github-actions"}
