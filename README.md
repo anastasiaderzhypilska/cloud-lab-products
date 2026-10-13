@@ -6,6 +6,7 @@
 Python FastAPI + PostgreSQL. API підтримує роботу з товарами.
 
 - GET /health — перевірка стану
+- GET /version — версія застосунку та перевірка CI/CD
 - /products — операції з товарами
 - /docs — Swagger UI
 
@@ -109,6 +110,7 @@ Workflow: .github/workflows/deploy.yml
 У корені проєкту створити файл `.env`:
 
     DB_PASSWORD=local_password_123
+    JWT_SECRET=replace_with_random_secret
 
 Це приклад пароля лише для локальної розробки. Не використовувати
 його як пароль AWS RDS.
@@ -143,7 +145,7 @@ JWT-токен генерується окремо; API не має ендпоі
 Токен перевіряється сервером за алгоритмом HS256.
 Без токена API повертає HTTP 401 Unauthorized.
 
-Ендпоінти /health і /docs доступні без авторизації.
+Ендпоінти /health, /version і /docs доступні без авторизації.
 
 Для локального запуску файл .env повинен містити:
 
