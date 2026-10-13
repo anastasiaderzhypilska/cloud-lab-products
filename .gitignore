@@ -7,3 +7,5 @@ __pycache__/
 *.tfstate.*
 *.tfvars
 .jwt_secret
+
+*.tfplan

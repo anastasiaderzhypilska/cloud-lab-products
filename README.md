@@ -130,3 +130,54 @@ terraform/database.auto.tfvars (цей файл не додавати в Git).
     docker compose down
 
 Дані залишаються у Docker volume `pgdata`.
+
+## JWT-автентифікація
+
+Ендпоінти для роботи з товарами захищені JWT:
+
+- GET /products
+- POST /products
+- PUT /products/{product_id}
+- DELETE /products/{product_id}
+
+Для доступу необхідний заголовок:
+Authorization: Bearer <JWT_TOKEN>
+
+Токен перевіряється сервером за алгоритмом HS256.
+Без токена API повертає HTTP 401 Unauthorized.
+
+Ендпоінти /health і /docs доступні без авторизації.
+
+Для локального запуску файл .env повинен містити:
+
+    DB_PASSWORD=<local_database_password>
+    JWT_SECRET=<random_secret>
+
+Для AWS секрет JWT зберігається в Secrets Manager.
+Перед першим terraform apply необхідно створити
+в корені проєкту файл .jwt_secret з випадковим секретом.
+Файл .jwt_secret не додається в Git.
+
+## Моніторинг AWS
+
+Моніторинг описаний у terraform/monitoring.tf.
+
+CloudWatch Logs:
+- /ecs/cloud-lab-products
+
+CloudWatch Dashboard:
+- cloud-lab-dashboard
+- HTTP Requests
+- HTTP 5xx Errors
+- Response Time
+- ECS CPU and Memory
+
+CloudWatch Alarm:
+- cloud-lab-api-5xx
+- Спрацьовує, якщо протягом 5 хвилин є помилки HTTP 5xx.
+
+Amazon SNS:
+- Topic: cloud-lab-alerts
+- Email-підписка потребує підтвердження через лист AWS.
+
+Email задається через змінну Terraform alert_email.
