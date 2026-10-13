@@ -40,7 +40,7 @@ Swagger: http://localhost:8000/docs
     terraform plan
     terraform apply
 
-Перед запуском потрібні AWS credentials, db_password та Docker-образ в ECR.
+Перед запуском потрібні AWS credentials, db_password та запущений Docker Desktop. Початковий Docker-образ автоматично збирається і завантажується в ECR через Terraform.
 
 Видалення інфраструктури після захисту:
 
@@ -139,6 +139,7 @@ Workflow: .github/workflows/deploy.yml
 Для доступу необхідний заголовок:
 Authorization: Bearer <JWT_TOKEN>
 
+JWT-токен генерується окремо; API не має ендпоінта для його видачі.
 Токен перевіряється сервером за алгоритмом HS256.
 Без токена API повертає HTTP 401 Unauthorized.
 
