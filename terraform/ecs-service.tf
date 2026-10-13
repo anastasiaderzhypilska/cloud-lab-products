@@ -67,6 +67,7 @@ resource "aws_ecs_service" "api" {
   }
 
   depends_on = [
+    terraform_data.ecr_bootstrap,
     aws_lb_listener.http,
     aws_iam_role_policy_attachment.ecs_execution,
     aws_iam_role_policy.ecs_secrets,

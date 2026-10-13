@@ -67,37 +67,33 @@ Workflow: .github/workflows/deploy.yml
 
 ## Перше розгортання з нуля
 
-Потрібні Docker, Terraform, AWS CLI та налаштовані AWS credentials.
-Перед запуском налаштувати MFA, AWS Budget і пароль БД у
-terraform/database.auto.tfvars (цей файл не додавати в Git).
+Потрібні Terraform, запущений Docker Desktop, AWS CLI
+та авторизований AWS-профіль `cloud-lab-admin`.
 
-1. Створити ECR:
+Перед запуском:
+- Увімкнути MFA та налаштувати AWS Budget.
+- Створити `terraform/database.auto.tfvars` із паролем PostgreSQL.
+- Створити `terraform/alerts.auto.tfvars` з email для сповіщень.
+- Створити `.jwt_secret` у корені проєкту.
 
-    cd terraform
-    terraform init
-    terraform apply -target=aws_ecr_repository.api
+Команди з кореня проєкту:
 
-2. Повернутися в корінь проєкту й завантажити образ:
+    terraform -chdir=terraform init
+    TMPDIR="$HOME/cloud-lab-tmp" terraform -chdir=terraform apply
 
-    cd ..
-    export AWS_PROFILE=cloud-lab-admin
-    export AWS_REGION=eu-north-1
-    export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-    export ECR="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cloud-lab-products"
+Під час першого apply Terraform створює ECR.
+Ресурс `terraform_data.ecr_bootstrap` перевіряє наявність образу `v1`.
+Якщо образ відсутній, він збирає та завантажує його до запуску ECS.
 
-    aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-    docker build -t "$ECR:v1" .
-    docker push "$ECR:v1"
+Після першого розгортання GitHub Actions автоматично
+оновлює ECS після push у `main`, використовуючи тег Git SHA.
 
-3. Завершити створення інфраструктури:
+Для початкового розгортання потрібні локальні Docker та AWS CLI.
+Повне розгортання з порожнього акаунта одним apply ще не перевірено.
 
-    cd terraform
-    terraform apply
+Після захисту:
 
-Після першого розгортання GitHub Actions автоматично оновлює ECS
-при кожному push у main.
-
-Видалення після захисту: terraform destroy.
+    TMPDIR="$HOME/cloud-lab-tmp" terraform -chdir=terraform destroy
 
 ## Структура проєкту
 
